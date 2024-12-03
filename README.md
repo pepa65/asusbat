@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/asusbat.svg)](https://crates.io/crates/asusbat)
 
-# asusbat 0.2.0
+# asusbat 0.2.1
 **Set battery charge limit on ASUS laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -76,7 +76,7 @@ Install the musl binary: `cargo-binstall asusbat`
 
 ## Usage
 ```
-asusbat 0.2.0 - Set battery charge limit on ASUS laptops on Linux with CLI
+asusbat 0.2.1 - Set battery charge limit on ASUS laptops on Linux with CLI
 Usage: asusbat [COMMAND]
 Commands:
   info         Print battery info [default command]

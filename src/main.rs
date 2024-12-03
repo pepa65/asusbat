@@ -26,7 +26,7 @@ impl std::str::FromStr for Percent {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		const ERR_MSG: &str = "Percent must be a number between 1 and 100";
 		let percent = s.parse().map_err(|_e| ERR_MSG)?;
-		if percent < 1 || percent > 100 {
+		if !(1..=100).contains(&percent) {
 			return std::result::Result::Err(ERR_MSG.to_owned());
 		}
 		std::result::Result::Ok(Self(percent))
@@ -153,7 +153,7 @@ impl Battery {
 		for target in TARGETS {
 			let path = format!("{UNITPATH}-{target}.service");
 			let file = fs::read_to_string(path).ok()?;
-			if Some(file.clone()) == None {
+			if Some(file.clone()).is_none() {
 				return Some(Percent(0));
 			}
 			let re = Regex::new(format!("(?m)^ExecStart=/bin/sh -c 'echo ([0-9]+) >{KEYPATH}/BAT./{LIMITKEY}'$").as_str()).unwrap();
@@ -198,10 +198,10 @@ impl Battery {
 		let persiststr = "Persist state";
 		let persist = self.get_persist();
 		if persist != Some(Percent(0)) {
-			if persist == None {
+			if persist.is_none() {
 				println!("{persiststr:<pad_size$}  NO");
 			} else {
-				println!("{persiststr:<pad_size$}  {}%", persist.unwrap().to_string());
+				println!("{persiststr:<pad_size$}  {}%", persist.unwrap());
 			}
 		} else {
 			println!("{persiststr:<pad_size$}  INCONSISTENT");
