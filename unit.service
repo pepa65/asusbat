@@ -1,0 +1,13 @@
+[Unit]
+Description=Set battery charge threshold to ${limit}
+After=${target}.target
+StartLimitBurst=0
+
+[Service]
+Type=oneshot
+Restart=on-failure
+ExecStart=/bin/sh -c 'echo ${limit} >${path}'
+RemainAfterExit=true
+
+[Install]
+WantedBy=${target}.target

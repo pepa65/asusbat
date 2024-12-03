@@ -1,295 +1,236 @@
-// src: https://www.linuxuprising.com/2021/02/how-to-limit-battery-charging-set.html
-
-mod linux_service;
+// main.rs
 
 use anyhow::{Context, Error, Ok, Result};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use regex::Regex;
-
 use std::{
-    ffi::OsStr,
-    fs, io,
-    path::{Path, PathBuf},
-    process::{self, Stdio},
+	collections::HashMap,
+	ffi::OsStr,
+	fs, io,
+	path::{Path, PathBuf},
+	process::{self, Stdio},
 };
+use text_template::*;
 
-use linux_service::LinuxService;
+const NAME: &str = "asusbat";
+const UNITPATH: &str = "/etc/systemd/system/asusbat";
+const KEYPATH: &str = "/sys/class/power_supply";
+const LIMITKEY: &str = "charge_control_end_threshold";
+const TARGETS: [&str; 6] = ["hibernate", "hybrid-sleep", "multi-user", "sleep", "suspend", "suspend-then-hibernate"];
 
 #[derive(Clone, Debug, PartialEq)]
 struct Percent(u8);
 impl std::str::FromStr for Percent {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        const ERR_MSG: &str = "Percent must be a number between 0 and 100";
-        let value = s.parse().map_err(|_e| ERR_MSG)?;
-        if value > 100 {
-            return std::result::Result::Err(ERR_MSG.to_owned());
-        }
-        std::result::Result::Ok(Self(value))
-    }
+	type Err = String;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		const ERR_MSG: &str = "Percent must be a number between 1 and 100";
+		let percent = s.parse().map_err(|_e| ERR_MSG)?;
+		if percent < 1 || percent > 100 {
+			return std::result::Result::Err(ERR_MSG.to_owned());
+		}
+		std::result::Result::Ok(Self(percent))
+	}
 }
 impl std::fmt::Display for Percent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
+	}
 }
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(version, about, after_help = "Root privileges required for: limit, persist & unpersist")]
+#[command(help_template(
+	"\
+{before-help}{name} {version} - {about}
+{usage-heading} {usage}
+{all-args}{after-help}
+"
+))]
 struct Cli {
-    #[command(subcommand)]
-    command: Command,
+	#[command(subcommand)]
+	command: Option<Command>,
 }
 
 #[derive(Subcommand)]
 enum Command {
-    /// Change battery charge limit
-    Set {
-        #[arg(short, long, default_value_t = false)]
-        /// Persist after system reboot, i.e. create a systemd service
-        persist: bool,
-        /// Battery charge % limit [0, 100]
-        value: Percent,
-    },
-    /// Print current battery charge limit
-    Get,
-    /// Restore 100% battery limit and remove systemd service
-    Clean,
-    /// Print battery info
-    Info,
-    /// Generate shell completions
-    #[command(long_about = "Generate shell completions
-        Example:
-        $ batterrier completions zsh > _batterrier
-        $ sudo mv _batterrier /usr/local/share/zsh/site-functions")]
-    Completions { shell: Shell },
+	/// Print battery info [default command]
+	Info,
+	/// Set battery charge limit: PERCENT (1..100)
+	Limit { percent: Percent },
+	/// Persist charge limit: create and enable systemd services
+	Persist,
+	/// Unpersist charge limit: disable and remove systemd services
+	Unpersist,
+	/// Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
+	#[command(long_about = "Generate shell completions. Example:
+		asusbat completions bash > _bash
+		mv _bash ~/.local/share/bash_completion/completions/asusbat")]
+	Completions { shell: Shell },
 }
 
-struct BatteryLimiter {
-    bat_path: PathBuf,
+struct Battery {
+	bat_path: PathBuf,
 }
-impl BatteryLimiter {
-    const SERVICE_FILENAME: &'static str = "battery-charge-threshold.service";
-    const SERVICE_PATH: &'static str =
-        const_format::formatcp!("/etc/systemd/system/{}", BatteryLimiter::SERVICE_FILENAME);
+impl Battery {
+	fn new() -> Result<Self> {
+		for bat_name in ["BAT0", "BAT1", "BATT", "BATC"] {
+			let bat_path = Path::new(KEYPATH).join(bat_name);
+			if fs::metadata(&bat_path).is_ok() {
+				return Ok(Self { bat_path });
+			}
+		}
+		Err(Error::msg("Battery not found".to_owned()))
+	}
 
-    fn new() -> Result<Self> {
-        // Path to the battery charge limit file is `/sys/class/power_supply/BAT?/charge_control_end_threshold`
-        // where  `BAT?` is one of `BAT0`, `BAT1`, `BATT`, `BATC`.
-        const BAT_NAME: [&str; 4] = ["BAT0", "BAT1", "BATT", "BATC"];
-        for bat_name in &BAT_NAME {
-            let bat_path = Path::new("/sys/class/power_supply").join(bat_name);
-            if fs::metadata(&bat_path).is_ok() {
-                return Ok(Self { bat_path });
-            }
-        }
-        Err(Error::msg("Battery not found".to_owned()))
-    }
+	/// Write to a file with sudo, like `echo "$2" |sudo tee "$1" >/dev/null
+	fn sudo_write<P: AsRef<Path>, C: AsRef<OsStr>>(path: P, contents: C) -> Result<()> {
+		let echo = process::Command::new("echo").arg(contents).stdout(Stdio::piped()).spawn()?;
+		process::Command::new("sudo")
+			.arg("tee")
+			.arg(path.as_ref().as_os_str())
+			.stdin(Stdio::from(echo.stdout.ok_or("Nothing piped in by echo").map_err(Error::msg)?))
+			.stdout(Stdio::null())
+			.spawn()?
+			.wait()?;
+		Ok(())
+	}
 
-    /// Write to a file with sudo. Equivalent to:
-    /// ```sh
-    /// echo $2 | sudo tee $1 > /dev/null
-    /// ```
-    fn write_protected<P: AsRef<Path>, C: AsRef<OsStr>>(path: P, contents: C) -> Result<()> {
-        let echo = process::Command::new("echo")
-            .arg(contents)
-            .stdout(Stdio::piped())
-            .spawn()?;
-        process::Command::new("sudo")
-            .arg("tee")
-            .arg(path.as_ref().as_os_str())
-            .stdin(Stdio::from(
-                echo.stdout
-                    .ok_or("No piped input from echo")
-                    .map_err(Error::msg)?,
-            ))
-            .stdout(Stdio::null())
-            .spawn()?
-            .wait()?;
-        Ok(())
-    }
+	fn get_limit(&self) -> Result<Percent> {
+		fs::read_to_string(self.bat_path.join(LIMITKEY))
+			.context(format!("Failed to read from {}", self.bat_path.join(LIMITKEY).display()))?
+			.trim()
+			.parse::<Percent>()
+			.map_err(|e| Error::msg(format!("Failed to parse battery limit: {e}")))
+	}
 
-    fn print_changed_limit(old_limit: &Percent, new_limit: &Percent) {
-        println!("🔋{old_limit} -> 🔋{new_limit}");
-    }
+	fn limit(&self, limit: &Percent) -> Result<()> {
+		let old_limit = self.get_limit()?;
+		Self::sudo_write(self.bat_path.join(LIMITKEY), limit.to_string())?;
+		if old_limit == *limit {
+			println!("Unchanged: \x1b[1;32m{limit}\x1b[0m%");
+		} else {
+			println!("\x1b[1;31m{old_limit}\x1b[0m% -> \x1b[1;32m{limit}\x1b[0m%");
+		}
+		Ok(())
+	}
 
-    fn charge_control_threshold_path(&self) -> PathBuf {
-        self.bat_path.join("charge_control_end_threshold")
-    }
+	fn persist(&self) -> Result<()> {
+		// Runtime include in the repo root
+		let template = Template::from(include_str!("../unit.service"));
+		let mut values = HashMap::new();
+		let limit = self.get_limit()?.to_string();
+		values.insert("limit", &*limit);
+		let key = self.bat_path.join(LIMITKEY).display().to_string();
+		values.insert("path", &key);
+		for target in TARGETS {
+			values.insert("target", target);
+			let content = template.fill_in(&values).to_string();
+			let path = format!("{UNITPATH}-{target}.service");
+			Self::sudo_write(&path, content)?;
+			let unit = format!("{NAME}-{target}.service");
+			process::Command::new("sudo").args(format!("systemctl enable --now {unit} --quiet").split(' ')).spawn()?.wait()?;
+		}
+		println!("Systemd services created and enabled");
+		Ok(())
+	}
 
-    fn get_value(&self) -> Result<Percent> {
-        fs::read_to_string(self.charge_control_threshold_path())
-            .context(format!(
-                "Failed to read from {}",
-                self.charge_control_threshold_path().display()
-            ))?
-            .trim()
-            .parse::<Percent>()
-            .map_err(|e| Error::msg(format!("Failed to parse battery limit: {e}")))
-    }
+	fn unpersist(&self) -> Result<()> {
+		for target in TARGETS {
+			let unit = format!("{NAME}-{target}.service");
+			let path = format!("{UNITPATH}-{target}.service");
+			if fs::metadata(&path).is_ok() {
+				process::Command::new("sudo").args(format!("systemctl disable --now {unit} --quiet").split(' ')).spawn()?.wait()?;
+				process::Command::new("sudo").arg("rm").arg(path).spawn()?.wait()?;
+			}
+		}
+		println!("Systemd services disabled and removed");
+		Ok(())
+	}
 
-    fn set_value(&self, limit: &Percent) -> Result<()> {
-        Self::write_protected(self.charge_control_threshold_path(), limit.to_string())
-    }
+	fn get_persist(&self) -> Option<Percent> {
+		let mut percent = Percent(0);
+		for target in TARGETS {
+			let path = format!("{UNITPATH}-{target}.service");
+			let file = fs::read_to_string(path).ok()?;
+			if Some(file.clone()) == None {
+				return Some(Percent(0));
+			}
+			let re = Regex::new(format!("(?m)^ExecStart=/bin/sh -c 'echo ([0-9]+) >{KEYPATH}/BAT./{LIMITKEY}'$").as_str()).unwrap();
+			let pct = re.captures(&file)?.get(1)?.as_str().parse::<Percent>().unwrap();
+			if percent == Percent(0) {
+				percent = pct;
+			} else if percent != pct {
+				return Some(Percent(0));
+			}
+		}
+		Some(percent)
+	}
 
-    fn set(&self, limit: &Percent, persist: bool) -> Result<()> {
-        let old_limit = self.get_value()?;
-        self.set_value(limit)?;
-        Self::print_changed_limit(&old_limit, limit);
-
-        if !persist {
-            return Ok(());
-        }
-
-        println!("Creating systemd service");
-
-        let mut linux_service: LinuxService =
-            serde_ini::from_str(include_str!("../battery-charge-threshold.service")).unwrap();
-
-        linux_service.service.exec_start = format!(
-            "/bin/bash -c 'echo {} > {}'",
-            limit,
-            self.charge_control_threshold_path().display()
-        );
-        let service_contents = serde_ini::to_string(&linux_service)?;
-
-        Self::write_protected(BatteryLimiter::SERVICE_PATH, service_contents)?;
-
-        process::Command::new("sudo")
-            .args(
-                const_format::formatcp!("systemctl enable {}", BatteryLimiter::SERVICE_FILENAME)
-                    .split(' '),
-            )
-            .spawn()?
-            .wait()?;
-
-        Ok(())
-    }
-
-    fn get_persisted(&self) -> Option<Percent> {
-        let persisted_service: LinuxService =
-            serde_ini::from_str(&fs::read_to_string(Self::SERVICE_PATH).ok()?).ok()?;
-        let re = Regex::new(r"/bin/bash -c 'echo \b(\d+)\b > /sys/class/power_supply/BAT0/charge_control_end_threshold'").unwrap();
-        re.captures(&persisted_service.service.exec_start)?
-            .get(1)?
-            .as_str()
-            .parse()
-            .ok()
-    }
-
-    fn get(&self) -> Result<()> {
-        let current_limit = self.get_value()?;
-        let persisted_limit = self.get_persisted();
-        println!("current: 🔋{current_limit}");
-        println!(
-            "persisted: {}",
-            if let Some(persisted_limit) = persisted_limit {
-                format!("🔋{persisted_limit}")
-            } else {
-                "Not set".to_owned()
-            }
-        );
-
-        Ok(())
-    }
-
-    fn clean(&self) -> Result<()> {
-        let old_limit = self.get_value()?;
-        self.set_value(&Percent(100))?;
-        Self::print_changed_limit(&old_limit, &Percent(100));
-
-        if fs::metadata(BatteryLimiter::SERVICE_PATH).is_ok() {
-            println!("Removing systemd service");
-            process::Command::new("sudo")
-                .arg("rm")
-                .arg(BatteryLimiter::SERVICE_PATH)
-                .spawn()?
-                .wait()?;
-        }
-
-        Ok(())
-    }
-
-    fn info(&self) {
-        const INFO_FILES: [&str; 18] = [
-            "alarm",
-            "capacity",
-            "capacity_level",
-            "charge_control_end_threshold",
-            "cycle_count",
-            "energy_full",
-            "energy_full_design",
-            "energy_now",
-            "manufacturer",
-            "model_name",
-            "power_now",
-            "present",
-            "serial_number",
-            "status",
-            "technology",
-            "type",
-            "voltage_min_design",
-            "voltage_now",
-        ];
-
-        let info = INFO_FILES
-            .iter()
-            .filter_map(|file| {
-                fs::read_to_string(self.bat_path.join(file))
-                    .ok()
-                    .map(|value| (file, value.trim().to_owned()))
-            })
-            .collect::<Vec<_>>();
-        let pad_size = info.iter().map(|(file, _)| file.len()).max().unwrap_or(0);
-        let info_string = info
-            .iter()
-            .map(|(file, value)| format!("{file:<pad_size$} {value}"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        let info_string = format!("Path: {}\n{info_string}", self.bat_path.display());
-
-        println!("{info_string}");
-    }
+	fn info(&self) {
+		const INFO: [(&str, &str, &str); 15] = [
+			("manufacturer", "Brand", ""),
+			("model_name", "Model", ""),
+			("technology", "Battery Type", ""),
+			("status", "Charge Status", ""),
+			("capacity_level", "Battery Condition", ""),
+			("charge_full", "Current Max. Capacity", " μAh"),
+			("power_now", "Current Max. Capacity", " μAh"),
+			("energy_now", "Current Max. Capacity", " μAh"),
+			("energy_full", "Current Max. Capacity", " μAh"),
+			("charge_full_design", "Design Max. Capacity", " μAh"),
+			("energy_full_design", "Design Max. Capacity", " μAh"),
+			("voltage_min_design", "Min. Voltage", " μV"),
+			("voltage_now", "Current Voltage", " μV"),
+			("capacity", "Charge Level", "%"),
+			("charge_control_end_threshold", "Charge Limit", "%"),
+		];
+		let info = INFO
+			.iter()
+			.filter_map(|v| fs::read_to_string(self.bat_path.join(v.0)).ok().map(|value| (v.1, value.trim().to_owned(), v.2)))
+			.collect::<Vec<_>>();
+		let pad_size = info.iter().map(|(file, _, _)| file.len()).max().unwrap_or(0);
+		let info_string = info.iter().map(|(file, value, unit)| format!("{:<pad_size$}  {}{}", file, value, unit)).collect::<Vec<_>>().join("\n");
+		let path = &self.bat_path.display().to_string();
+		let bat = path.split('/').last().unwrap();
+		println!("[{bat}]");
+		println!("{info_string}");
+		let persiststr = "Persist state";
+		let persist = self.get_persist();
+		if persist != Some(Percent(0)) {
+			if persist == None {
+				println!("{persiststr:<pad_size$}  NO");
+			} else {
+				println!("{persiststr:<pad_size$}  {}%", persist.unwrap().to_string());
+			}
+		} else {
+			println!("{persiststr:<pad_size$}  INCONSISTENT");
+		}
+		// position of Current Max. Capacity and Current Design Capacity in info depends on which keys are found
+		let health = 100 * info[5].1.parse::<u32>().unwrap_or(0) / info[6].1.parse::<u32>().unwrap_or(1);
+		let healthstr = "health";
+		println!("{healthstr:<pad_size$}  {health}%");
+	}
 }
 
 fn main() -> Result<()> {
-    let args = Cli::parse();
-    let battery_limiter = BatteryLimiter::new()?;
-
-    match args.command {
-        Command::Set { persist, value } => {
-            battery_limiter.set(&value, persist)?;
-        }
-        Command::Get => {
-            battery_limiter.get()?;
-        }
-        Command::Clean => {
-            battery_limiter.clean()?;
-        }
-        Command::Info => battery_limiter.info(),
-        Command::Completions { shell } => {
-            clap_complete::generate(
-                shell,
-                &mut Cli::command(),
-                env!("CARGO_PKG_NAME"),
-                &mut io::stdout(),
-            );
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::linux_service::LinuxService;
-
-    #[test]
-    fn service() {
-        let service: Result<LinuxService, _> =
-            serde_ini::from_str(include_str!("../battery-charge-threshold.service"));
-        assert!(service.is_ok());
-    }
+	let args = Cli::parse();
+	let battery = Battery::new()?;
+	match args.command {
+		Some(Command::Limit { percent }) => {
+			battery.limit(&percent)?;
+		}
+		Some(Command::Persist) => {
+			battery.persist()?;
+		}
+		Some(Command::Unpersist) => {
+			battery.unpersist()?;
+		}
+		Some(Command::Completions { shell }) => {
+			clap_complete::generate(shell, &mut Cli::command(), env!("CARGO_PKG_NAME"), &mut io::stdout());
+		}
+		Some(Command::Info) => battery.info(),
+		_ => battery.info(),
+	}
+	Ok(())
 }
