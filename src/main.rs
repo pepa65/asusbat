@@ -39,7 +39,7 @@ impl std::fmt::Display for Percent {
 }
 
 #[derive(Parser)]
-#[command(version, about, after_help = "Root privileges required for: limit, persist & unpersist")]
+#[command(version, about, after_help = "Root privileges required for: limit, persist & unpersist", infer_subcommands(true))]
 #[command(help_template(
 	"\
 {before-help}{name} {version} - {about}
@@ -51,7 +51,6 @@ struct Cli {
 	#[command(subcommand)]
 	command: Option<Command>,
 }
-
 #[derive(Subcommand)]
 enum Command {
 	/// Print battery info (default command)
@@ -132,7 +131,7 @@ impl Battery {
 			let unit = format!("{NAME}-{target}.service");
 			process::Command::new("sudo").args(format!("systemctl enable --now {unit} --quiet").split(' ')).spawn()?.wait()?;
 		}
-		println!("Systemd services created and enabled");
+		println!("Systemd services created and enabled with limit {limit}");
 		Ok(())
 	}
 
@@ -232,6 +231,6 @@ fn main() -> Result<()> {
 		}
 		Some(Command::Info) => battery.info(),
 		_ => battery.info(),
-	}
+	};
 	Ok(())
 }

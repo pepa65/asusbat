@@ -1,6 +1,7 @@
 [alias]
 rel = "build --release"
 clip = "clippy --release"
+inst = "install --path . --target=x86_64-unknown-linux-musl"
 
 [build]
 target = "x86_64-unknown-linux-musl"
