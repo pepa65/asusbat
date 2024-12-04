@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/asusbat.svg)](https://crates.io/crates/asusbat)
 
-# asusbat 0.3.0
+# asusbat 0.3.1
 **Set battery charge limit on ASUS laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -19,15 +19,16 @@ An often recommended battery charge limit is 80.
 * Related Linux kernel module: `asus_nb_wmi`
 * System variables used: `/sys/class/power_supply/BAT?/*`
 * Systemd unit file names: `/etc/systemd/system/asusbat-TARGET.service`
+* Systemd targets: `hibernate`, `hybrid-sleep`, `multi-user`, `sleep`, `suspend`, `suspend-then-hibernate`
 
 ## Features
-* Works with supported ASUS laptops
-* Show battery info (default)
-* Set battery charge limit (needs root privileges)
-* Persist the charge limit through creating and enabling systemd services for targets:
-  `hibernate`, `hybrid-sleep`, `multi-user`, `sleep`, `suspend`, `suspend-then-hibernate`
-* Unpersist the charge limit by disabling and removing systemd services
-* Generate shell completions (bash, elvish, fish, powershell, zsh)
+* Works with supported ASUS laptops, but `info` works with any machine.
+* `info`: Show battery info (default).
+* `limit`: Set battery charge limit (needs root privileges), takes percentage as argument.
+* `persist`: Persist the charge limit through creating and enabling systemd services,
+  optionally takes percentage as argument for limit (needs root privileges).
+* `unpersist`: Unpersist the charge limit by disabling and removing systemd services (needs root privileges).
+* `completions`: Generate shell completions (bash, elvish, fish, powershell, zsh).
 
 ## Installation
 ### Download static single-binary
@@ -76,7 +77,7 @@ Install the musl binary: `cargo-binstall asusbat`
 
 ## Usage
 ```
-asusbat 0.3.0 - Set battery charge limit on ASUS laptops on Linux with CLI
+asusbat 0.3.1 - Set battery charge limit on ASUS laptops on Linux with CLI
 Usage: asusbat [COMMAND]
 Commands:
   info         Print battery info (default command)
