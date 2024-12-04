@@ -1,6 +1,6 @@
 [alias]
 rel = "build --release"
-inst = "install --path .
+inst = "install --path ."
 clip = "clippy --release"
 
 [build]
