@@ -54,18 +54,19 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-	/// Print battery info [default command]
+	/// Print battery info (default command)
 	Info,
 	/// Set battery charge limit: PERCENT (1..100)
 	Limit { percent: Percent },
-	/// Persist charge limit: create and enable systemd services
-	Persist,
+	/// Persist charge limit with systemd: [PERCENT (1..100)]
+	Persist { percent: Option<Percent> },
 	/// Unpersist charge limit: disable and remove systemd services
 	Unpersist,
 	/// Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
 	#[command(long_about = "Generate shell completions. Example:
-		asusbat completions bash > _bash
-		mv _bash ~/.local/share/bash_completion/completions/asusbat")]
+  asusbat completions bash > _bash
+  mkdir -p ~/.local/share/bash_completion/completions
+  mv _bash ~/.local/share/bash_completion/completions/asusbat")]
 	Completions { shell: Shell },
 }
 
@@ -115,14 +116,14 @@ impl Battery {
 		Ok(())
 	}
 
-	fn persist(&self) -> Result<()> {
-		// Runtime include in the repo root
-		let template = Template::from(include_str!("../unit.service"));
+	fn persist(&self, percent: Option<Percent>) -> Result<()> {
+		let limit = if percent.is_none() { self.get_limit()?.clone().to_string() } else { percent.clone().unwrap().to_string() };
 		let mut values = HashMap::new();
-		let limit = self.get_limit()?.to_string();
-		values.insert("limit", &*limit);
+		values.insert("limit", limit.as_str());
 		let key = self.bat_path.join(LIMITKEY).display().to_string();
 		values.insert("path", &key);
+		// Compile-time include from the repo root
+		let template = Template::from(include_str!("../unit.service"));
 		for target in TARGETS {
 			values.insert("target", target);
 			let content = template.fill_in(&values).to_string();
@@ -220,8 +221,8 @@ fn main() -> Result<()> {
 		Some(Command::Limit { percent }) => {
 			battery.limit(&percent)?;
 		}
-		Some(Command::Persist) => {
-			battery.persist()?;
+		Some(Command::Persist { percent }) => {
+			battery.persist(percent)?;
 		}
 		Some(Command::Unpersist) => {
 			battery.unpersist()?;
