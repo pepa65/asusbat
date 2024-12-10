@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/asusbat.svg)](https://crates.io/crates/asusbat)
 
-# asusbat 0.4.1
+# asusbat 0.4.2
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -44,7 +44,7 @@ An often recommended battery charge limit is 80.
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/asusbat/releases/download/0.4.1/asusbat
+wget https://github.com/pepa65/asusbat/releases/download/0.4.2/asusbat
 sudo mv asusbat /usr/local/bin/
 sudo chown root:root /usr/local/bin/asusbat
 sudo chmod +x /usr/local/bin/asusbat
@@ -88,7 +88,7 @@ Install the musl binary: `cargo-binstall asusbat`
 
 ## Usage
 ```
-asusbat 0.4.1 - Set battery charge limit on supported laptops on Linux with CLI
+asusbat 0.4.2 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: asusbat [COMMAND]
 Commands:
   info         Print battery info (default command)
