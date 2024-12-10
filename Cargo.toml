@@ -7,7 +7,7 @@ repository = "https://github.com/pepa65/asusbat"
 authors = ["github.com/pepa65 <pepa65@passchier.net>"]
 license = "GPL-3.0-or-later"
 keywords = ["laptop", "battery", "charge", "charge-limit", "persist"]
-categories = ["command-line-utilities", "systemd"]
+categories = ["command-line-utilities"]
 
 [package.metadata.binstall]
 pkg-url = "{repo}/releases/download/{version}/asusbat"
