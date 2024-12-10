@@ -6,6 +6,7 @@ use clap_complete::Shell;
 use regex::Regex;
 use std::{
 	collections::HashMap,
+	env,
 	ffi::OsStr,
 	fs, io,
 	path::{Path, PathBuf},
@@ -74,12 +75,18 @@ struct Battery {
 }
 impl Battery {
 	fn new() -> Result<Self> {
-		for bat_name in ["BAT0", "BAT1", "BATT", "BATC"] {
+		let bat_name = env::var("ASUSBAT_BAT")?;
+		if !bat_name.is_empty() {
 			let bat_path = Path::new(KEYPATH).join(bat_name);
-			if fs::metadata(&bat_path).is_ok() {
-				return Ok(Self { bat_path });
+			return Ok(Self { bat_path });
+		} else {
+			for bat_name in ["BAT0", "BAT1", "BATT", "BATC"] {
+				let bat_path = Path::new(KEYPATH).join(bat_name);
+				if fs::metadata(&bat_path).is_ok() {
+					return Ok(Self { bat_path });
+				}
 			}
-		}
+		};
 		Err(Error::msg("Battery not found".to_owned()))
 	}
 
@@ -194,7 +201,9 @@ impl Battery {
 		let path = &self.bat_path.display().to_string();
 		let bat = path.split('/').last().unwrap();
 		println!("[{bat}]");
-		println!("{info_string}");
+		if !info_string.is_empty() {
+			println!("{info_string}");
+		};
 		let persiststr = "Persist state";
 		let persist = self.get_persist();
 		if persist != Some(Percent(0)) {
@@ -206,10 +215,14 @@ impl Battery {
 		} else {
 			println!("{persiststr:<pad_size$}  INCONSISTENT");
 		}
-		// position of Current Max. Capacity and Current Design Capacity in info depends on which keys are found
-		let health = 100 * info[5].1.parse::<u32>().unwrap_or(0) / info[6].1.parse::<u32>().unwrap_or(1);
 		let healthstr = "health";
-		println!("{healthstr:<pad_size$}  {health}%");
+		if info.len() > 6 {
+			// position of Current Max. Capacity and Current Design Capacity in info depends on which keys are found
+			let health = 100 * info[5].1.parse::<u32>().unwrap_or(0) / info[6].1.parse::<u32>().unwrap_or(1);
+			println!("{healthstr:<pad_size$}  {health}%");
+		} else {
+			println!("{healthstr:<pad_size$}  NO INFO");
+		};
 	}
 }
 

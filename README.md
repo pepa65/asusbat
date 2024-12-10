@@ -3,8 +3,8 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/asusbat.svg)](https://crates.io/crates/asusbat)
 
-# asusbat 0.4.0
-**Set battery charge limit on ASUS laptops on Linux with CLI**
+# asusbat 0.4.1
+**Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
 An often recommended battery charge limit is 80.
@@ -16,13 +16,23 @@ An often recommended battery charge limit is 80.
 * Required:
   - Linux kernel `5.4-rc1` or later (exposing the charge limit variable)
   - `systemd` version `244` or later (supporting the directives in the included systemd service)
-* Related Linux kernel module: `asus_nb_wmi`
 * System variables used: `/sys/class/power_supply/BAT?/*`
 * Systemd unit file names: `/etc/systemd/system/asusbat-TARGET.service`
 * Systemd targets: `hibernate`, `hybrid-sleep`, `multi-user`, `sleep`, `suspend`, `suspend-then-hibernate`
+* Kernel modules and code that supports the charge limit setting:
+  - `asus-wmi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/asus-wmi.c
+  - `thinkpad_acpi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/thinkpad_acpi.c
+  - `dell-laptop`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/dell/dell-laptop.c
+  - `lg-laptop`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/lg-laptop.c
+  - `huawei-wmi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/huawei-wmi.c
+  - `system76_acpi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/system76_acpi.c
+  - `fujitsu-laptop`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/fujitsu-laptop.c
+  - `msi-ec`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/msi-ec.c
+  - `toshiba_acpi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/toshiba_acpi.c
 
 ## Features
-* Works with supported ASUS laptops, but `info` works with any machine.
+* Works with supported laptop (`info` works with any machine):
+  ASUS, Lenovo (ThinkPad), Dell, LG, Huawei, System76, Fujitsu, MSI en Toshiba.
 * `info`: Show battery info (default).
 * `limit`: Set battery charge limit (needs root privileges), takes percentage as argument.
 * `persist`: Persist the charge limit through creating and enabling systemd services,
@@ -34,7 +44,7 @@ An often recommended battery charge limit is 80.
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/asusbat/releases/download/0.4.0/asusbat
+wget https://github.com/pepa65/asusbat/releases/download/0.4.1/asusbat
 sudo mv asusbat /usr/local/bin/
 sudo chown root:root /usr/local/bin/asusbat
 sudo chmod +x /usr/local/bin/asusbat
@@ -78,7 +88,7 @@ Install the musl binary: `cargo-binstall asusbat`
 
 ## Usage
 ```
-asusbat 0.4.0 - Set battery charge limit on ASUS laptops on Linux with CLI
+asusbat 0.4.1 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: asusbat [COMMAND]
 Commands:
   info         Print battery info (default command)

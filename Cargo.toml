@@ -2,12 +2,12 @@
 name = "asusbat"
 version = "0.4.1"
 edition = "2021"
-description = "Set battery charge limit on ASUS laptops on Linux with CLI"
+description = "Set battery charge limit on supported laptops on Linux with CLI"
 repository = "https://github.com/pepa65/asusbat"
 authors = ["github.com/pepa65 <pepa65@passchier.net>"]
 license = "GPL-3.0-or-later"
-keywords = ["ASUS", "battery", "charge", "charge-limit", "persist"]
-categories = ["command-line-utilities"]
+keywords = ["laptop", "battery", "charge", "charge-limit", "persist"]
+categories = ["command-line-utilities", "systemd"]
 
 [package.metadata.binstall]
 pkg-url = "{repo}/releases/download/{version}/asusbat"
