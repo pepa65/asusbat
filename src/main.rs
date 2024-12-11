@@ -14,11 +14,12 @@ use std::{
 };
 use text_template::*;
 
-const NAME: &str = "asusbat";
-const UNITPATH: &str = "/etc/systemd/system/asusbat";
+const NAME: &str = "batlimit";
+const UNITPATH: &str = "/etc/systemd/system/batlimit";
 const KEYPATH: &str = "/sys/class/power_supply";
 const LIMITKEY: &str = "charge_control_end_threshold";
 const TARGETS: [&str; 6] = ["hibernate", "hybrid-sleep", "multi-user", "sleep", "suspend", "suspend-then-hibernate"];
+const ENVVAR: &str = "BATLIMIT_BAT";
 
 #[derive(Clone, Debug, PartialEq)]
 struct Percent(u8);
@@ -64,9 +65,9 @@ enum Command {
 	Unpersist,
 	/// Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
 	#[command(long_about = "Generate shell completions. Example:
-  asusbat completions bash > _bash
+  batlimit completions bash > _bash
   mkdir -p ~/.local/share/bash_completion/completions
-  mv _bash ~/.local/share/bash_completion/completions/asusbat")]
+  mv _bash ~/.local/share/bash_completion/completions/batlimit")]
 	Completions { shell: Shell },
 }
 
@@ -75,7 +76,7 @@ struct Battery {
 }
 impl Battery {
 	fn new() -> Result<Self> {
-		let bat_name = env::var("ASUSBAT_BAT")?;
+		let bat_name = env::var(ENVVAR)?;
 		if !bat_name.is_empty() {
 			let bat_path = Path::new(KEYPATH).join(bat_name);
 			return Ok(Self { bat_path });

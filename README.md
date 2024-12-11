@@ -1,9 +1,9 @@
-[![Build Status](https://github.com/pepa65/asusbat/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pepa65/asusbat/actions/workflows/ci.yml)
-[![dependency status](https://deps.rs/repo/github/pepa65/asusbat/status.svg)](https://deps.rs/repo/github/pepa65/asusbat)
+[![Build Status](https://github.com/pepa65/batlimit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pepa65/batlimit/actions/workflows/ci.yml)
+[![dependency status](https://deps.rs/repo/github/pepa65/batlimit/status.svg)](https://deps.rs/repo/github/pepa65/batlimit)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![downloads](https://img.shields.io/crates/d/asusbat.svg)](https://crates.io/crates/asusbat)
+[![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# asusbat 0.4.2
+# batlimit 0.5.0
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -11,13 +11,13 @@ An often recommended battery charge limit is 80.
 
 * License: GPLv3.0
 * Authors: github.com/pepa65, github.com/stlenyk
-* Repo: https:/github.com/pepa65/asusbat
+* Repo: https:/github.com/pepa65/batlimit
 * After: https://github.com/stlenyk/batterrier
 * Required:
   - Linux kernel `5.4-rc1` or later (exposing the charge limit variable)
   - `systemd` version `244` or later (supporting the directives in the included systemd service)
 * System variables used: `/sys/class/power_supply/BAT?/*`
-* Systemd unit file names: `/etc/systemd/system/asusbat-TARGET.service`
+* Systemd unit file names: `/etc/systemd/system/batlimit-TARGET.service`
 * Systemd targets: `hibernate`, `hybrid-sleep`, `multi-user`, `sleep`, `suspend`, `suspend-then-hibernate`
 * Kernel modules and code that supports the charge limit setting:
   - `asus-wmi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/asus-wmi.c
@@ -39,36 +39,36 @@ An often recommended battery charge limit is 80.
   optionally takes percentage as argument for limit (needs root privileges).
 * `unpersist`: Unpersist the charge limit by disabling and removing systemd services (needs root privileges).
 * `completions`: Generate shell completions (bash, elvish, fish, powershell, zsh).
-* Can use abbreviations for the commands, like: `asusbat u` (unpersisting the limit).
+* Can use abbreviations for the commands, like: `batlimit u` (unpersisting the limit).
 
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/asusbat/releases/download/0.4.2/asusbat
-sudo mv asusbat /usr/local/bin/
-sudo chown root:root /usr/local/bin/asusbat
-sudo chmod +x /usr/local/bin/asusbat
+wget https://github.com/pepa65/batlimit/releases/download/0.5.0/batlimit
+sudo mv batlimit /usr/local/bin/
+sudo chown root:root /usr/local/bin/batlimit
+sudo chmod +x /usr/local/bin/batlimit
 ```
 
 ### Using cargo (rust toolchain)
 If not installed yet, install a **Rust toolchain**, see https://www.rust-lang.org/tools/install
 
 ### Cargo from crates.io
-`cargo install asusbat --target=x86_64-unknown-linux-musl`
+`cargo install batlimit --target=x86_64-unknown-linux-musl`
 
 #### Cargo from git
-`cargo install --git https://github.com/pepa65/asusbat --target=x86_64-unknown-linux-musl`
+`cargo install --git https://github.com/pepa65/batlimit --target=x86_64-unknown-linux-musl`
 
 #### Cargo static build (avoid GLIBC incompatibilities)
 ```
-git clone https://github.com/pepa65/asusbat
-cd asusbat
+git clone https://github.com/pepa65/batlimit
+cd batlimit
 rustup target add x86_64-unknown-linux-musl
 export RUSTFLAGS='-C target-feature=+crt-static'
 cargo build --release --target=x86_64-unknown-linux-musl
 ```
 
-For smaller binary size: `upx --best --lzma target/x86_64-unknown-linux-musl/release/asusbat`
+For smaller binary size: `upx --best --lzma target/x86_64-unknown-linux-musl/release/batlimit`
 
 ## Install with cargo-binstall
 Even without a full Rust toolchain, rust binaries can be installed with the static binary `cargo-binstall`:
@@ -82,14 +82,14 @@ sudo chown root:root cargo-binstall
 sudo mv cargo-binstall /usr/local/bin/
 ```
 
-Install the musl binary: `cargo-binstall asusbat`
+Install the musl binary: `cargo-binstall batlimit`
 
-(Then `asusbat` will be installed in `~/.cargo/bin/` which will need to be added to `PATH`!)
+(Then `batlimit` will be installed in `~/.cargo/bin/` which will need to be added to `PATH`!)
 
 ## Usage
 ```
-asusbat 0.4.2 - Set battery charge limit on supported laptops on Linux with CLI
-Usage: asusbat [COMMAND]
+batlimit 0.5.0 - Set battery charge limit on supported laptops on Linux with CLI
+Usage: batlimit [COMMAND]
 Commands:
   info         Print battery info (default command)
   limit        Set battery charge limit: PERCENT (1..100)
