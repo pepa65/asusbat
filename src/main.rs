@@ -86,7 +86,7 @@ impl Battery {
 			if fs::metadata(&bat_path).is_ok() {
 				return Ok(Self { bat_path });
 			};
-		};
+		}
 		Err(Error::msg("Battery not found".to_owned()))
 	}
 
