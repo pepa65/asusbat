@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# batlimit 0.5.0
+# batlimit 0.5.1
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -29,10 +29,11 @@ An often recommended battery charge limit is 80.
   - `fujitsu-laptop`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/fujitsu-laptop.c
   - `msi-ec`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/msi-ec.c
   - `toshiba_acpi`: https://github.com/torvalds/linux/blob/master/drivers/platform/x86/toshiba_acpi.c
+	- `applesmc-next`: Needs to be compiled from https://github.com/c---/applesmc-next
 
 ## Features
 * Works with supported laptop (`info` works with any machine):
-  ASUS, Lenovo (ThinkPad), Dell, LG, Huawei, System76, Fujitsu, MSI en Toshiba.
+  ASUS, Lenovo (ThinkPad), Dell, LG, Huawei, System76, Fujitsu, MSI, Toshiba and Intel Apple.
 * `info`: Show battery info (default).
 * `limit`: Set battery charge limit (needs root privileges), takes percentage as argument.
 * `persist`: Persist the charge limit through creating and enabling systemd services,
@@ -44,7 +45,7 @@ An often recommended battery charge limit is 80.
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/batlimit/releases/download/0.5.0/batlimit
+wget https://github.com/pepa65/batlimit/releases/download/0.5.1/batlimit
 sudo mv batlimit /usr/local/bin/
 sudo chown root:root /usr/local/bin/batlimit
 sudo chmod +x /usr/local/bin/batlimit
@@ -88,7 +89,7 @@ Install the musl binary: `cargo-binstall batlimit`
 
 ## Usage
 ```
-batlimit 0.5.0 - Set battery charge limit on supported laptops on Linux with CLI
+batlimit 0.5.1 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: batlimit [COMMAND]
 Commands:
   info         Print battery info (default command)
