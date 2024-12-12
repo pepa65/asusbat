@@ -76,17 +76,16 @@ struct Battery {
 }
 impl Battery {
 	fn new() -> Result<Self> {
-		let bat_name = env::var(ENVVAR)?;
-		if !bat_name.is_empty() {
-			let bat_path = Path::new(KEYPATH).join(bat_name);
+		let bat_name = env::var(ENVVAR);
+		if bat_name.is_ok() && !bat_name.clone().unwrap().is_empty() {
+			let bat_path = Path::new(KEYPATH).join(bat_name.unwrap());
 			return Ok(Self { bat_path });
-		} else {
-			for bat_name in ["BAT0", "BAT1", "BATT", "BATC"] {
-				let bat_path = Path::new(KEYPATH).join(bat_name);
-				if fs::metadata(&bat_path).is_ok() {
-					return Ok(Self { bat_path });
-				}
-			}
+		};
+		for bat_name in ["BAT0", "BAT1", "BATT", "BATC"] {
+			let bat_path = Path::new(KEYPATH).join(bat_name);
+			if fs::metadata(&bat_path).is_ok() {
+				return Ok(Self { bat_path });
+			};
 		};
 		Err(Error::msg("Battery not found".to_owned()))
 	}
