@@ -71,6 +71,8 @@ enum Command {
   mkdir -p ~/.local/share/bash_completion/completions
   mv _bash ~/.local/share/bash_completion/completions/batlimit")]
 	Completions { shell: Shell },
+	/// Output the readme file from the repo
+	Readme,
 }
 
 struct Battery {
@@ -246,6 +248,10 @@ fn main() -> Result<()> {
 		}
 		Some(Command::Persist { percent }) => {
 			battery.persist(percent)?;
+		}
+		Some(Command::Readme) => {
+			// Compile-time include from the repo root
+			print!("{}", include_str!("../README.md"));
 		}
 		Some(Command::Unpersist) => {
 			battery.unpersist()?;
