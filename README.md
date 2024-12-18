@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# batlimit 0.5.1
+# batlimit 0.6.0
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -16,7 +16,10 @@ An often recommended battery charge limit is 80.
 * Required:
   - Linux kernel `5.4-rc1` or later (exposing the charge limit variable)
   - `systemd` version `244` or later (supporting the directives in the included systemd service)
-* System variables used: `/sys/class/power_supply/BAT?/*`
+* System variables used:
+  - In general: `/sys/class/power_supply/BAT?/*`
+  - Particularly: `/sys/class/power_supply/BAT?/charge_control_end_threshold`
+  - For some models: `/sys/class/power_supply/BAT?/charge_control_start_threshold`
 * Systemd unit file names: `/etc/systemd/system/batlimit-TARGET.service`
 * Systemd targets: `hibernate`, `hybrid-sleep`, `multi-user`, `sleep`, `suspend`, `suspend-then-hibernate`
 * Kernel modules and code that supports the charge limit setting:
@@ -45,7 +48,7 @@ An often recommended battery charge limit is 80.
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/batlimit/releases/download/0.5.1/batlimit
+wget https://github.com/pepa65/batlimit/releases/download/0.6.0/batlimit
 sudo mv batlimit /usr/local/bin/
 sudo chown root:root /usr/local/bin/batlimit
 sudo chmod +x /usr/local/bin/batlimit
@@ -89,7 +92,7 @@ Install the musl binary: `cargo-binstall batlimit`
 
 ## Usage
 ```
-batlimit 0.5.1 - Set battery charge limit on supported laptops on Linux with CLI
+batlimit 0.6.0 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: batlimit [COMMAND]
 Commands:
   info         Print battery info (default command)

@@ -6,7 +6,7 @@ StartLimitBurst=0
 [Service]
 Type=oneshot
 Restart=on-failure
-ExecStart=/bin/sh -c 'echo ${limit} >${path}'
+ExecStart=/bin/sh -c '${start}echo ${limit} >${path}'
 RemainAfterExit=true
 
 [Install]

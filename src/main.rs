@@ -18,6 +18,8 @@ const NAME: &str = "batlimit";
 const UNITPATH: &str = "/etc/systemd/system/batlimit";
 const KEYPATH: &str = "/sys/class/power_supply";
 const LIMITKEY: &str = "charge_control_end_threshold";
+const STARTKEY: &str = "charge_control_start_threshold";
+const INTERVAL: u8 = 2;
 const TARGETS: [&str; 6] = ["hibernate", "hybrid-sleep", "multi-user", "sleep", "suspend", "suspend-then-hibernate"];
 const ENVVAR: &str = "BATLIMIT_BAT";
 
@@ -125,6 +127,14 @@ impl Battery {
 	fn persist(&self, percent: Option<Percent>) -> Result<()> {
 		let limit = if percent.is_none() { self.get_limit()?.clone().to_string() } else { percent.clone().unwrap().to_string() };
 		let mut values = HashMap::new();
+		let startval = limit.parse::<u8>().unwrap() - INTERVAL;
+		let startkey = self.bat_path.join(STARTKEY).display().to_string();
+		let startstr = format!("echo {} >{}; ", startval.to_string().as_str(), &startkey);
+		if fs::exists(self.bat_path.join(STARTKEY)).unwrap() {
+			values.insert("start", startstr.as_str());
+		} else {
+			values.insert("start", "");
+		};
 		values.insert("limit", limit.as_str());
 		let key = self.bat_path.join(LIMITKEY).display().to_string();
 		values.insert("path", &key);
@@ -175,7 +185,7 @@ impl Battery {
 	}
 
 	fn info(&self) {
-		const INFO: [(&str, &str, &str); 15] = [
+		const INFO: [(&str, &str, &str); 16] = [
 			("manufacturer", "Brand", ""),
 			("model_name", "Model", ""),
 			("technology", "Battery Type", ""),
@@ -190,7 +200,8 @@ impl Battery {
 			("voltage_min_design", "Min. Voltage", " μV"),
 			("voltage_now", "Current Voltage", " μV"),
 			("capacity", "Charge Level", "%"),
-			("charge_control_end_threshold", "Charge Limit", "%"),
+			(STARTKEY, "Charge Start", "%"),
+			(LIMITKEY, "Charge Limit", "%"),
 		];
 		let info = INFO
 			.iter()
