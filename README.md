@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# batlimit 0.7.0
+# batlimit 0.8.0
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -39,16 +39,17 @@ An often recommended battery charge limit is 80.
   ASUS, Lenovo (ThinkPad), Dell, LG, Huawei, System76, Fujitsu, MSI, Toshiba and Intel Apple.
 * `info`: Show battery info (default).
 * `limit`: Set battery charge limit (needs root privileges), takes percentage as argument.
+* `clear`: Clear battery charge limit (needs root privileges)
 * `persist`: Persist the charge limit through creating and enabling systemd services,
   optionally takes percentage as argument for limit (needs root privileges).
 * `unpersist`: Unpersist the charge limit by disabling and removing systemd services (needs root privileges).
-* `completions`: Generate shell completions (bash, elvish, fish, powershell, zsh).
+* `shell`: Generate shell completions (bash, elvish, fish, powershell, zsh).
 * Can use abbreviations for the commands, like: `batlimit u` (unpersisting the limit).
 
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/batlimit/releases/download/0.7.0/batlimit
+wget https://github.com/pepa65/batlimit/releases/download/0.8.0/batlimit
 sudo mv batlimit /usr/local/bin/
 sudo chown root:root /usr/local/bin/batlimit
 sudo chmod +x /usr/local/bin/batlimit
@@ -92,20 +93,22 @@ Install the musl binary: `cargo-binstall batlimit`
 
 ## Usage
 ```
-batlimit 0.7.0 - Set battery charge limit on supported laptops on Linux with CLI
+batlimit 0.8.0 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: batlimit [COMMAND]
 Commands:
-  info         Print battery info (default command)
-  limit        Set battery charge limit: PERCENT (1..100)
-  persist      Persist charge limit with systemd: [PERCENT (1..100)]
-  unpersist    Unpersist charge limit: disable and remove systemd services
-  completions  Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
-  readme       Output the readme file from the repo
-  help         Print this message or the help of the given subcommand(s)
+  info       Print battery info (default command)
+  limit      Set battery charge limit: PERCENT (1..99)
+  clear      Clear charge limit
+  persist    Persist charge limit with systemd: [PERCENT (1..99)]
+  unpersist  Unpersist charge limit: disable and remove systemd services
+  shell      Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
+  readme     Output the readme file from the repo
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
   -V, --version  Print version
 
-Root privileges required for: limit, persist & unpersist
+Commands can be abbreviated up to their first letter.
+Root privileges required for: limit & clear, persist & unpersist
 ```

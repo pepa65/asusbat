@@ -28,9 +28,9 @@ struct Percent(u8);
 impl std::str::FromStr for Percent {
 	type Err = String;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		const ERR_MSG: &str = "Percent must be a number between 1 and 100";
+		const ERR_MSG: &str = "Percent must be a number between 1 and 99";
 		let percent = s.parse().map_err(|_e| ERR_MSG)?;
-		if !(1..=100).contains(&percent) {
+		if !(1..=99).contains(&percent) {
 			return std::result::Result::Err(ERR_MSG.to_owned());
 		}
 		std::result::Result::Ok(Self(percent))
@@ -43,7 +43,14 @@ impl std::fmt::Display for Percent {
 }
 
 #[derive(Parser)]
-#[command(version, about, after_help = "Root privileges required for: limit, persist & unpersist", infer_subcommands(true))]
+#[command(
+	version,
+	about,
+	after_help = "\
+	Commands can be abbreviated up to their first letter.\n\
+	Root privileges required for: limit & clear, persist & unpersist",
+	infer_subcommands(true)
+)]
 #[command(help_template(
 	"\
 {before-help}{name} {version} - {about}
@@ -59,18 +66,20 @@ struct Cli {
 enum Command {
 	/// Print battery info (default command)
 	Info,
-	/// Set battery charge limit: PERCENT (1..100)
+	/// Set battery charge limit: PERCENT (1..99)
 	Limit { percent: Percent },
-	/// Persist charge limit with systemd: [PERCENT (1..100)]
+	/// Clear charge limit
+	Clear,
+	/// Persist charge limit with systemd: [PERCENT (1..99)]
 	Persist { percent: Option<Percent> },
 	/// Unpersist charge limit: disable and remove systemd services
 	Unpersist,
 	/// Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
 	#[command(long_about = "Generate shell completions. Example:
-  batlimit completions bash > _bash
+  batlimit shell bash > _bash
   mkdir -p ~/.local/share/bash_completion/completions
   mv _bash ~/.local/share/bash_completion/completions/batlimit")]
-	Completions { shell: Shell },
+	Shell { shell: Shell },
 	/// Output the readme file from the repo
 	Readme,
 }
@@ -123,6 +132,12 @@ impl Battery {
 		} else {
 			println!("\x1b[1;31m{old_limit}\x1b[0m% -> \x1b[1;32m{limit}\x1b[0m%");
 		}
+		Ok(())
+	}
+
+	fn clear(&self) -> Result<()> {
+		Self::sudo_write(self.bat_path.join(LIMITKEY), "100")?;
+		println!("Cleared charge limit");
 		Ok(())
 	}
 
@@ -246,6 +261,9 @@ fn main() -> Result<()> {
 		Some(Command::Limit { percent }) => {
 			battery.limit(&percent)?;
 		}
+		Some(Command::Clear) => {
+			battery.clear()?;
+		}
 		Some(Command::Persist { percent }) => {
 			battery.persist(percent)?;
 		}
@@ -256,7 +274,7 @@ fn main() -> Result<()> {
 		Some(Command::Unpersist) => {
 			battery.unpersist()?;
 		}
-		Some(Command::Completions { shell }) => {
+		Some(Command::Shell { shell }) => {
 			clap_complete::generate(shell, &mut Cli::command(), env!("CARGO_PKG_NAME"), &mut io::stdout());
 		}
 		Some(Command::Info) => battery.info(),
