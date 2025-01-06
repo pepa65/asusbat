@@ -23,25 +23,6 @@ const INTERVAL: u8 = 2;
 const TARGETS: [&str; 6] = ["hibernate", "hybrid-sleep", "multi-user", "sleep", "suspend", "suspend-then-hibernate"];
 const ENVVAR: &str = "BATLIMIT_BAT";
 
-#[derive(Clone, Debug, PartialEq)]
-struct Percent(u8);
-impl std::str::FromStr for Percent {
-	type Err = String;
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		const ERR_MSG: &str = "Percent must be a number between 1 and 99";
-		let percent = s.parse().map_err(|_e| ERR_MSG)?;
-		if !(1..=99).contains(&percent) {
-			return std::result::Result::Err(ERR_MSG.to_owned());
-		}
-		std::result::Result::Ok(Self(percent))
-	}
-}
-impl std::fmt::Display for Percent {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.0)
-	}
-}
-
 #[derive(Parser)]
 #[command(
 	version,
@@ -67,11 +48,11 @@ enum Command {
 	/// Print battery info (default command)
 	Info,
 	/// Set battery charge limit: PERCENT (1..99)
-	Limit { percent: Percent },
+	Limit { percent: u8 },
 	/// Clear charge limit
 	Clear,
 	/// Persist charge limit with systemd: [PERCENT (1..99)]
-	Persist { percent: Option<Percent> },
+	Persist { percent: Option<u8> },
 	/// Unpersist charge limit: disable and remove systemd services
 	Unpersist,
 	/// Generate completions: SHELL (bash|elvish|fish|powershell|zsh)
@@ -116,35 +97,48 @@ impl Battery {
 		Ok(())
 	}
 
-	fn get_limit(&self) -> Result<Percent> {
+	fn get_limit(&self) -> Result<u8> {
 		fs::read_to_string(self.bat_path.join(LIMITKEY))
 			.context(format!("Failed to read from {}", self.bat_path.join(LIMITKEY).display()))?
 			.trim()
-			.parse::<Percent>()
+			.parse::<u8>()
 			.map_err(|e| Error::msg(format!("Failed to parse battery limit: {e}")))
 	}
 
-	fn limit(&self, limit: &Percent) -> Result<()> {
+	fn limit(&self, limit: u8) -> Result<()> {
+		if !(1..=99).contains(&limit) {
+			return Err(Error::msg("Percent must be a number between 1 and 100"));
+		}
 		let old_limit = self.get_limit()?;
 		Self::sudo_write(self.bat_path.join(LIMITKEY), limit.to_string())?;
-		if old_limit == *limit {
-			println!("Unchanged: \x1b[1;32m{limit}\x1b[0m%");
+		if old_limit == limit {
+			println!("Limit unchanged: {limit}%");
+		} else if old_limit == 100 {
+			println!("Limit set: {limit}%");
 		} else {
-			println!("\x1b[1;31m{old_limit}\x1b[0m% -> \x1b[1;32m{limit}\x1b[0m%");
+			println!("Limit changed: {old_limit}% -> {limit}%");
 		}
 		Ok(())
 	}
 
 	fn clear(&self) -> Result<()> {
-		Self::sudo_write(self.bat_path.join(LIMITKEY), "100")?;
-		println!("Cleared charge limit");
+		let old_limit = self.get_limit()?;
+		if old_limit < 100 {
+			Self::sudo_write(self.bat_path.join(LIMITKEY), "100")?;
+			println!("Cleared charge limit");
+		} else {
+			println!("Charge limit already cleared");
+		}
 		Ok(())
 	}
 
-	fn persist(&self, percent: Option<Percent>) -> Result<()> {
-		let limit = if percent.is_none() { self.get_limit()?.clone().to_string() } else { percent.clone().unwrap().to_string() };
+	fn persist(&self, percent: Option<u8>) -> Result<()> {
+		let limit = if percent.is_none() { self.get_limit()? } else { percent.unwrap() };
+		if !(1..=99).contains(&limit) {
+			return Err(Error::msg("Percent must be a number between 1 and 99"));
+		}
 		let mut values = HashMap::new();
-		let startval = limit.parse::<u8>().unwrap() - INTERVAL;
+		let startval = limit - INTERVAL;
 		let startkey = self.bat_path.join(STARTKEY).display().to_string();
 		let startstr = format!("echo {} >{}; ", startval.to_string().as_str(), &startkey);
 		if fs::exists(self.bat_path.join(STARTKEY)).unwrap() {
@@ -152,7 +146,8 @@ impl Battery {
 		} else {
 			values.insert("start", "");
 		};
-		values.insert("limit", limit.as_str());
+		let lim = limit.to_string();
+		values.insert("limit", &lim);
 		let key = self.bat_path.join(LIMITKEY).display().to_string();
 		values.insert("path", &key);
 		// Compile-time include from the repo root
@@ -165,7 +160,7 @@ impl Battery {
 			let unit = format!("{NAME}-{target}.service");
 			process::Command::new("sudo").args(format!("systemctl enable --now {unit} --quiet").split(' ')).spawn()?.wait()?;
 		}
-		println!("Systemd services created and enabled with limit {limit}");
+		println!("Persist systemd services created and enabled with limit {limit}");
 		Ok(())
 	}
 
@@ -178,24 +173,24 @@ impl Battery {
 				process::Command::new("sudo").arg("rm").arg(path).spawn()?.wait()?;
 			}
 		}
-		println!("Systemd services disabled and removed");
+		println!("Persist systemd services disabled and removed");
 		Ok(())
 	}
 
-	fn get_persist(&self) -> Option<Percent> {
-		let mut percent = Percent(0);
+	fn get_persist(&self) -> Option<u8> {
+		let mut percent: u8 = 0;
 		for target in TARGETS {
 			let path = format!("{UNITPATH}-{target}.service");
 			let file = fs::read_to_string(path).ok()?;
 			if Some(file.clone()).is_none() {
-				return Some(Percent(0));
+				return Some(0); // inconclusive: some unit files not present
 			}
 			let re = Regex::new(format!("(?m)^ExecStart=/bin/sh -c 'echo ([0-9]+) >{KEYPATH}/BAT./{LIMITKEY}'$").as_str()).unwrap();
-			let pct = re.captures(&file)?.get(1)?.as_str().parse::<Percent>().unwrap();
-			if percent == Percent(0) {
+			let pct = re.captures(&file)?.get(1)?.as_str().parse::<u8>().unwrap();
+			if percent == 0 {
 				percent = pct;
 			} else if percent != pct {
-				return Some(Percent(0));
+				return Some(0); // inconclusive: different values in unit files
 			}
 		}
 		Some(percent)
@@ -207,7 +202,7 @@ impl Battery {
 			("model_name", "Model", ""),
 			("technology", "Battery Type", ""),
 			("status", "Charge Status", ""),
-			("capacity_level", "Battery Condition", ""),
+			("capacity_level", "Battery State", ""),
 			("charge_full", "Current Max. Capacity", " μAh"),
 			("power_now", "Current Max. Capacity", " μAh"),
 			("energy_now", "Current Max. Capacity", " μAh"),
@@ -234,7 +229,7 @@ impl Battery {
 		};
 		let persiststr = "Persist state";
 		let persist = self.get_persist();
-		if persist != Some(Percent(0)) {
+		if persist != Some(0) {
 			if persist.is_none() {
 				println!("{persiststr:<pad_size$}  NO");
 			} else {
@@ -259,7 +254,7 @@ fn main() -> Result<()> {
 	let battery = Battery::new()?;
 	match args.command {
 		Some(Command::Limit { percent }) => {
-			battery.limit(&percent)?;
+			battery.limit(percent)?;
 		}
 		Some(Command::Clear) => {
 			battery.clear()?;

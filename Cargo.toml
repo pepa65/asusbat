@@ -1,6 +1,6 @@
 [package]
 name = "batlimit"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 description = "Set battery charge limit on supported laptops on Linux with CLI"
 repository = "https://github.com/pepa65/batlimit"
@@ -23,6 +23,9 @@ clap = { version = "4.5", features = ["derive"] }
 clap_complete = "4.5.11"
 regex = "1.11.1"
 text-template = "0.1.0"
+
+[lints.clippy]
+unnecessary_unwrap = "allow"
 
 [profile.release]
 opt-level = "z"
