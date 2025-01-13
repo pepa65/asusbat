@@ -1,10 +1,12 @@
 [package]
 name = "batlimit"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
+authors = ["github.com/pepa65 <pepa65@passchier.net>"]
 description = "Set battery charge limit on supported laptops on Linux with CLI"
 repository = "https://github.com/pepa65/batlimit"
-authors = ["github.com/pepa65 <pepa65@passchier.net>"]
+documentation = "https://docs.rs/batlimit"
+readme = "README.md"
 license = "GPL-3.0-or-later"
 keywords = ["laptop", "battery", "charge", "charge-limit", "persist"]
 categories = ["command-line-utilities"]
@@ -18,9 +20,9 @@ target-family = "Linux"
 target-arch = "X86_64"
 
 [dependencies]
-anyhow = "1.0.75"
-clap = { version = "4.5", features = ["derive"] }
-clap_complete = "4.5.11"
+anyhow = "1.0.95"
+clap = { version = "4.5.26", features = ["derive"] }
+clap_complete = "4.5.42"
 regex = "1.11.1"
 text-template = "0.1.0"
 
