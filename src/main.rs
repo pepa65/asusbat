@@ -239,9 +239,18 @@ impl Battery {
 			println!("{persiststr:<pad_size$}  INCONSISTENT");
 		}
 		let healthstr = "health";
-		if info.len() > 6 {
-			// position of Current Max. Capacity and Current Design Capacity in info depends on which keys are found
-			let health = 100 * info[5].1.parse::<u32>().unwrap_or(0) / info[6].1.parse::<u32>().unwrap_or(1);
+		let mut cur = String::new();
+		let mut des = String::new();
+		for triple in &info {
+			if triple.0 == INFO[5].1 {
+				cur = triple.1.clone();
+			};
+			if triple.0 == INFO[9].1 {
+				des = triple.1.clone();
+			};
+		}
+		if !cur.is_empty() && !des.is_empty() {
+			let health = 100 * cur.parse::<u32>().unwrap_or(0) / des.parse::<u32>().unwrap_or(1);
 			println!("{healthstr:<pad_size$}  {health}%");
 		} else {
 			println!("{healthstr:<pad_size$}  NO INFO");
