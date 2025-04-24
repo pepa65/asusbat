@@ -222,7 +222,7 @@ impl Battery {
 		let pad_size = info.iter().map(|(file, _, _)| file.len()).max().unwrap_or(0);
 		let info_string = info.iter().map(|(file, value, unit)| format!("{:<pad_size$}  {}{}", file, value, unit)).collect::<Vec<_>>().join("\n");
 		let path = &self.bat_path.display().to_string();
-		let bat = path.split('/').last().unwrap();
+		let bat = path.split('/').next_back().unwrap();
 		println!("[{bat}]");
 		if !info_string.is_empty() {
 			println!("{info_string}");
