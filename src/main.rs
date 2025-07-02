@@ -1,7 +1,7 @@
 // main.rs
 
 use anyhow::{Context, Error, Ok, Result};
-use clap::builder::styling::{AnsiColor, Effects, Styles};
+use clap::builder::styling::{AnsiColor, Effects, Style, Styles};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use regex::Regex;
@@ -15,16 +15,6 @@ use std::{
 };
 use text_template::*;
 
-// Cargo's color style: https://github.com/crate-ci/clap-cargo/blob/master/src/style.rs
-const STYLE: Styles = Styles::styled()
-	.header(AnsiColor::Green.on_default().effects(Effects::BOLD))
-	.usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
-	.literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
-	.placeholder(AnsiColor::Cyan.on_default())
-	.error(AnsiColor::Red.on_default().effects(Effects::BOLD))
-	.valid(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
-	.invalid(AnsiColor::Yellow.on_default().effects(Effects::BOLD));
-
 const NAME: &str = "batlimit";
 const UNITPATH: &str = "/etc/systemd/system/batlimit";
 const KEYPATH: &str = "/sys/class/power_supply";
@@ -33,18 +23,32 @@ const STARTKEY: &str = "charge_control_start_threshold";
 const INTERVAL: u8 = 2;
 const TARGETS: [&str; 6] = ["hibernate", "hybrid-sleep", "multi-user", "sleep", "suspend", "suspend-then-hibernate"];
 const ENVVAR: &str = "BATLIMIT_BAT";
+const CMD: Style = AnsiColor::Magenta.on_default().effects(Effects::BOLD);
+const HEAD: Style = AnsiColor::Cyan.on_default().effects(Effects::BOLD);
+const VALUE: Style = AnsiColor::Yellow.on_default().effects(Effects::BOLD);
+const NORMAL: Style = AnsiColor::White.on_default().effects(Effects::BOLD);
+const GOOD: Style = AnsiColor::Green.on_default().effects(Effects::BOLD);
+const ERROR: Style = AnsiColor::Red.on_default().effects(Effects::BOLD);
+const STYLE: Styles = Styles::styled()
+	.header(GOOD)
+	.usage(GOOD)
+	.placeholder(AnsiColor::Cyan.on_default())
+	.error(ERROR)
+	.literal(HEAD)
+	.valid(HEAD)
+	.invalid(VALUE);
 
 #[derive(Parser)]
 #[command(
 	version,
 	about,
 	styles = STYLE,
-	after_help = "\
+	after_help = format!("\
 	Commands can be abbreviated up to their first letter.\n\
-	Root privileges required for: limit & clear, persist & unpersist",
+	Root privileges required for: {CMD}limit {NORMAL}& {CMD}clear{NORMAL}, {CMD}persist {NORMAL}& {CMD}unpersist"),
 	infer_subcommands(true),
 	help_template(
-	"\
+"\
 {before-help}{name} {version} - {about}
 {usage-heading} {usage}
 {all-args}{after-help}
@@ -92,7 +96,7 @@ impl Battery {
 				return Ok(Self { bat_path });
 			};
 		}
-		Err(Error::msg("Battery not found".to_owned()))
+		Err(Error::msg(format!("{ERROR}Battery not found").to_owned()))
 	}
 
 	/// Write to a file with sudo, like `echo "$2" |sudo tee "$1" >/dev/null
@@ -101,7 +105,7 @@ impl Battery {
 		process::Command::new("sudo")
 			.arg("tee")
 			.arg(path.as_ref().as_os_str())
-			.stdin(Stdio::from(echo.stdout.ok_or("Nothing piped in by echo").map_err(Error::msg)?))
+			.stdin(Stdio::from(echo.stdout.ok_or(format!("{ERROR}Nothing piped in by echo")).map_err(Error::msg)?))
 			.stdout(Stdio::null())
 			.spawn()?
 			.wait()?;
@@ -113,21 +117,21 @@ impl Battery {
 			.context(format!("Failed to read from {}", self.bat_path.join(LIMITKEY).display()))?
 			.trim()
 			.parse::<u8>()
-			.map_err(|e| Error::msg(format!("Failed to parse battery limit: {e}")))
+			.map_err(|e| Error::msg(format!("{ERROR}Failed to parse battery limit: {VALUE}{e}")))
 	}
 
 	fn limit(&self, limit: u8) -> Result<()> {
 		if !(1..=99).contains(&limit) {
-			return Err(Error::msg("Percent must be a number between 1 and 100"));
+			return Err(Error::msg(format!("{ERROR}Percent must be a number between 1 and 100")));
 		}
 		let old_limit = self.get_limit()?;
 		Self::sudo_write(self.bat_path.join(LIMITKEY), limit.to_string())?;
 		if old_limit == limit {
-			println!("Limit unchanged: {limit}%");
+			println!("Limit unchanged: {VALUE}{limit}%");
 		} else if old_limit == 100 {
-			println!("Limit set: {limit}%");
+			println!("Limit set: {VALUE}{limit}%");
 		} else {
-			println!("Limit changed: {old_limit}% -> {limit}%");
+			println!("Limit changed: {VALUE}{old_limit}% {NORMAL}-> {VALUE}{limit}%");
 		}
 		Ok(())
 	}
@@ -146,7 +150,7 @@ impl Battery {
 	fn persist(&self, percent: Option<u8>) -> Result<()> {
 		let limit = if percent.is_none() { self.get_limit()? } else { percent.unwrap() };
 		if !(1..=99).contains(&limit) {
-			return Err(Error::msg("Percent must be a number between 1 and 99"));
+			return Err(Error::msg(format!("{ERROR}Percent must be a number between 1 and 99")));
 		}
 		let mut values = HashMap::new();
 		let startval = limit - INTERVAL;
@@ -171,7 +175,7 @@ impl Battery {
 			let unit = format!("{NAME}-{target}.service");
 			process::Command::new("sudo").args(format!("systemctl enable --now {unit} --quiet").split(' ')).spawn()?.wait()?;
 		}
-		println!("Persist systemd services created and enabled with limit {limit}");
+		println!("Persist systemd services created and enabled with limit {VALUE}{limit}");
 		Ok(())
 	}
 
@@ -231,10 +235,14 @@ impl Battery {
 			.filter_map(|v| fs::read_to_string(self.bat_path.join(v.0)).ok().map(|value| (v.1, value.trim().to_owned(), v.2)))
 			.collect::<Vec<_>>();
 		let pad_size = info.iter().map(|(file, _, _)| file.len()).max().unwrap_or(0);
-		let info_string = info.iter().map(|(file, value, unit)| format!("{:<pad_size$}  {}{}", file, value, unit)).collect::<Vec<_>>().join("\n");
+		let info_string = info
+			.iter()
+			.map(|(file, value, unit)| format!("{NORMAL}{file:<pad_size$}  {VALUE}{value}{unit}"))
+			.collect::<Vec<_>>()
+			.join("\n");
 		let path = &self.bat_path.display().to_string();
 		let bat = path.split('/').next_back().unwrap();
-		println!("[{bat}]");
+		println!("{HEAD}[{bat}]");
 		if !info_string.is_empty() {
 			println!("{info_string}");
 		};
@@ -242,12 +250,12 @@ impl Battery {
 		let persist = self.get_persist();
 		if persist != Some(0) {
 			if persist.is_none() {
-				println!("{persiststr:<pad_size$}  NO");
+				println!("{NORMAL}{persiststr:<pad_size$}  {VALUE}NO");
 			} else {
-				println!("{persiststr:<pad_size$}  {}%", persist.unwrap());
+				println!("{NORMAL}{persiststr:<pad_size$}  {VALUE}{}%", persist.unwrap());
 			}
 		} else {
-			println!("{persiststr:<pad_size$}  INCONSISTENT");
+			println!("{NORMAL}{persiststr:<pad_size$}  {VALUE}INCONSISTENT");
 		}
 		let healthstr = "health";
 		let mut cur = String::new();
@@ -262,9 +270,9 @@ impl Battery {
 		}
 		if !cur.is_empty() && !des.is_empty() {
 			let health = 100 * cur.parse::<u32>().unwrap_or(0) / des.parse::<u32>().unwrap_or(1);
-			println!("{healthstr:<pad_size$}  {health}%");
+			println!("{NORMAL}{healthstr:<pad_size$}  {VALUE}{health}%");
 		} else {
-			println!("{healthstr:<pad_size$}  NO INFO");
+			println!("{NORMAL}{healthstr:<pad_size$}  {VALUE}NO INFO");
 		};
 	}
 }
