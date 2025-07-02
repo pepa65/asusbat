@@ -1,6 +1,7 @@
 // main.rs
 
 use anyhow::{Context, Error, Ok, Result};
+use clap::builder::styling::{AnsiColor, Effects, Styles};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use regex::Regex;
@@ -13,6 +14,16 @@ use std::{
 	process::{self, Stdio},
 };
 use text_template::*;
+
+// Cargo's color style: https://github.com/crate-ci/clap-cargo/blob/master/src/style.rs
+const STYLE: Styles = Styles::styled()
+	.header(AnsiColor::Green.on_default().effects(Effects::BOLD))
+	.usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
+	.literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+	.placeholder(AnsiColor::Cyan.on_default())
+	.error(AnsiColor::Red.on_default().effects(Effects::BOLD))
+	.valid(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+	.invalid(AnsiColor::Yellow.on_default().effects(Effects::BOLD));
 
 const NAME: &str = "batlimit";
 const UNITPATH: &str = "/etc/systemd/system/batlimit";
@@ -27,12 +38,12 @@ const ENVVAR: &str = "BATLIMIT_BAT";
 #[command(
 	version,
 	about,
+	styles = STYLE,
 	after_help = "\
 	Commands can be abbreviated up to their first letter.\n\
 	Root privileges required for: limit & clear, persist & unpersist",
-	infer_subcommands(true)
-)]
-#[command(help_template(
+	infer_subcommands(true),
+	help_template(
 	"\
 {before-help}{name} {version} - {about}
 {usage-heading} {usage}
