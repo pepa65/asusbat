@@ -1,10 +1,11 @@
-[![Build Status](https://github.com/pepa65/batlimit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pepa65/batlimit/actions/workflows/ci.yml)
-[![Dependencies](https://deps.rs/repo/github/pepa65/batlimit/status.svg)](https://deps.rs/repo/github/pepa65/batlimit)
-[![Docs](https://img.shields.io/badge/Docs-batlimit-blue)](https://docs.rs/crate/batlimit/latest)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
+[![version](https://img.shields.io/crates/v/batlimit.svg)](https://crates.io/crates/batlimit)
+[![build](https://github.com/pepa65/batlimit/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/batlimit/actions/workflows/ci.yml)
+[![dependencies](https://deps.rs/repo/github/pepa65/batlimit/status.svg)](https://deps.rs/repo/github/pepa65/batlimit)
+[![docs](https://img.shields.io/badge/docs-batlimit-blue.svg)](https://docs.rs/crate/batlimit/latest)
+[![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/pepa65/batlimit/blob/main/LICENSE)
+[![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# batlimit 0.10.1
+# batlimit 0.10.2
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -50,7 +51,7 @@ An often recommended battery charge limit is 80.
 ## Installation
 ### Download static single-binary
 ```
-wget https://github.com/pepa65/batlimit/releases/download/0.10.1/batlimit
+wget https://github.com/pepa65/batlimit/releases/download/0.10.2/batlimit
 sudo mv batlimit /usr/local/bin/
 sudo chown root:root /usr/local/bin/batlimit
 sudo chmod +x /usr/local/bin/batlimit
@@ -94,7 +95,7 @@ Install the musl binary: `cargo-binstall batlimit`
 
 ## Usage
 ```
-batlimit 0.10.1 - Set battery charge limit on supported laptops on Linux with CLI
+batlimit 0.10.2 - Set battery charge limit on supported laptops on Linux with CLI
 Usage: batlimit [COMMAND]
 Commands:
   info       Print battery info (default command)
