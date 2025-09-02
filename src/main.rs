@@ -270,7 +270,7 @@ impl Battery {
 		}
 		if !cur.is_empty() && !des.is_empty() {
 			let health = 100 * cur.parse::<u32>().unwrap_or(0) / des.parse::<u32>().unwrap_or(1);
-			println!("{NORMAL}{healthstr:<pad_size$}  {VALUE}{health}%");
+			println!("{NORMAL}{healthstr:<pad_size$}  {VALUE}{}%", health.clamp(0, 100));
 		} else {
 			println!("{NORMAL}{healthstr:<pad_size$}  {VALUE}NO INFO");
 		};
