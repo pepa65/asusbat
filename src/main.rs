@@ -257,7 +257,7 @@ impl Battery {
 		} else {
 			println!("{NORMAL}{persiststr:<pad_size$}  {VALUE}INCONSISTENT");
 		}
-		let healthstr = "health";
+		let healthstr = "Health / Capacity";
 		let mut cur = String::new();
 		let mut des = String::new();
 		for triple in &info {

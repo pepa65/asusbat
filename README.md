@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/pepa65/batlimit/blob/main/LICENSE)
 [![downloads](https://img.shields.io/crates/d/batlimit.svg)](https://crates.io/crates/batlimit)
 
-# batlimit 0.10.33
+# batlimit 0.11.1
 **Set battery charge limit on supported laptops on Linux with CLI**
 
 It is now widely acknowledged that the life span of Li-ion batteries is extended by not charging them to the max.
@@ -77,7 +77,7 @@ cargo build --release --target=x86_64-unknown-linux-musl
 
 For smaller binary size: `upx --best --lzma target/x86_64-unknown-linux-musl/release/batlimit`
 
-## Install with cargo-binstall
+### Install with cargo-binstall
 Even without a full Rust toolchain, rust binaries can be installed with the static binary `cargo-binstall`:
 
 ```
@@ -113,4 +113,22 @@ Options:
 
 Commands can be abbreviated up to their first letter.
 Root privileges required for: limit & clear, persist & unpersist
+```
+
+## Sample output
+```
+[BAT1]
+Brand                  ASUS
+Model                  A32-K55
+Battery Type           Li-ion
+Charge Status          Not charging
+Battery State          Normal
+Current Max. Capacity  2660000 μAh
+Design Max. Capacity   4110000 μAh
+Min. Voltage           11679000 μV
+Current Voltage        11946000 μV
+Charge Level           81%
+Charge Limit           80%
+Persist state          80%
+Health / Capacity      64%
 ```
