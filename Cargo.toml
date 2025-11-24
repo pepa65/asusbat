@@ -1,6 +1,6 @@
 [package]
 name = "batlimit"
-version = "0.10.32"
+version = "0.10.33"
 edition = "2024"
 authors = ["github.com/pepa65 <pepa65@passchier.net>"]
 description = "Set battery charge limit on supported laptops on Linux with CLI"
