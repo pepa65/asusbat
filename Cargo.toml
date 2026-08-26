@@ -23,7 +23,7 @@ target-arch = "X86_64"
 anyhow = "1.0"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
-regex = "1"
+regex = "1.13"
 text-template = "0.1.0"
 
 [lints.clippy]
